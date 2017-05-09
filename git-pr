@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+
+# Git extension for making GitHub pull requests.
+# Usage: git pr [title] [description]
+
+title=$1
+body=$2
+
+# TODO: command line arguments
+skip_confirm=""
+
+# extract github repository from remote origin
+repo=`git remote get-url origin | sed -n "s/.*\/\/github.com\/\(..*\).git/\1/p"`
+
+if [ -z "$repo" ]; then
+    echo "Repository not supported, must be GitHub."
+    exit 1
+fi
+
+# current branch name
+branch=`git rev-parse --abbrev-ref HEAD`
+base="master"
+
+# use last commit message if title is empty
+if [ -z "$title" ]; then
+    title=`git log -1 --pretty=%B`
+fi
+
+# grab github authentication credentials
+credentials=`echo "host=github.com" | git credential fill`
+
+username=`echo $credentials | sed -n "s/.*username=\([^ ]*\).*/\1/p"`
+password=`echo $credentials | sed -n "s/.*password=\([^ ]*\).*/\1/p"`
+
+if [ -z "$username" ] || [ -z "$password" ]; then
+    echo "Could not get GitHub credentials."
+    exit 1
+fi
+
+# push changes, and set up remote if not already tracking upstream branch.
+if git rev-parse @{u} > /dev/null 2>&1; then
+    git push > /dev/null
+else
+    git push -u origin "$branch"
+fi
+
+# exit if git push fails
+if [ $? -ne 0 ]; then
+    exit 1
+fi
+
+# number of added commits
+commits=`git rev-list --count $base`
+
+# print pull request summary
+echo ""
+echo "$commits commit(s) [$branch -> $base]"
+echo "Title: $title"
+
+if [ -z $skip_confirm ]; then
+    printf "\nOpen pull request [Y/n]? "
+    read confirm
+
+    if [ -n "$confirm" ] && [ "$confirm" != "Y" ] && [ "$confirm" != "y" ]; then
+        exit 1
+    fi
+fi
+
+echo ""
+
+# create a pull request through the github api
+response=`wget --quiet --output-document=- --content-on-error \
+               --user="$username" --password="$password" --auth-no-challenge \
+               --header="Content-Type: application/json" \
+               --header="Accept: application/vnd.github.v3+json" \
+               --post-data="{\"title\":\"$title\",\"body\":\"$body\",\"head\":\"$branch\",\"base\":\"$base\"}" \
+               "https://api.github.com/repos/$repo/pulls"`
+wget_status=$?
+
+# TODO: fix very crude json parsing
+if [ $wget_status -eq 0 ]; then
+    github_pr_url=`echo $response | sed -n "s/{[^{]*\"html_url\": \"\([^\"]*\).*/\1/p"`
+    echo "Pull request opened:"
+    echo "$github_pr_url"
+
+    # TODO: remove this
+    if [ -z "$github_pr_url" ]; then
+        echo "[Debug] Unknown API response:"
+        echo "$response"
+    fi
+elif [ $wget_status -eq 8 ]; then
+    github_error_msg=`echo $response | sed -n "s/.*\"errors\":.*\"message\": \"\([^\"]*\).*/\1/p"`
+    if [ -z "$github_error_msg" ]; then
+        echo "Unknown API response:"
+        echo "$response"
+    else
+        echo "$github_error_msg"
+    fi
+    exit 1
+elif [ $wget_status -eq 6 ]; then
+	echo "Wrong username/password."
+    exit 1
+else
+    echo "Network error."
+    exit 1
+fi
