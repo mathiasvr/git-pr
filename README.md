@@ -9,6 +9,12 @@ git pr [title] [description]
 
 ## install
 
+### homebrew
+```
+brew install mathiasvr/repo/git-pr
+```
+
+### manual
 Place the [git-pr](https://github.com/mathiasvr/git-pr/blob/master/git-pr) script in your `$PATH`, and make it executable. Example:
 ```
 chmod +x git-pr
