@@ -6,24 +6,52 @@
 title=$1
 body=$2
 
-# TODO: command line arguments
-skip_confirm=""
+# print to stderr and exit
+function exit_error {
+    printf >&2 "$@\n" 
+    exit 1
+}
+
+# use editor to set title and body
+function set_with_editor {
+    # find user editor
+    user_editor=`git config --get core.editor`
+    user_editor=${user_editor:-${VISUAL:-${EDITOR:-vi}}}
+
+    # use a message file similar to git commit
+    git_root=`git rev-parse --show-toplevel`
+    pr_msg_file="$git_root/.git/PULLREQUEST_EDITMSG"
+
+    # write pull request message file template
+    cat > $pr_msg_file << EOF
+
+# Please enter a pull request title and description, on separate lines.
+# Lines starting with '#' will be ignored, and an empty title aborts
+# the pull request.
+#
+# $commits commit(s) [$branch -> $base]
+#
+EOF
+
+    # start editor
+    $user_editor "$pr_msg_file"
+
+    # first line is title
+    title=`grep -v ^# "$pr_msg_file" | head -1`
+
+    if [ -z "$title" ]; then
+        exit_error "Aborting pull request due to empty title."
+    fi
+
+    # subsequent lines are body, remove leading newlines, escape newlines for json
+    body=`grep -v ^# "$pr_msg_file" | tail +2 | sed '/./,$!d' | sed 's/$/\\\n/' | tr -d '\n'`
+}
 
 # extract github repository from remote origin
 repo=`git remote get-url origin | sed -n "s/.*\/\/github.com\/\(..*\).git/\1/p"`
 
 if [ -z "$repo" ]; then
-    echo "Repository not supported, must be GitHub."
-    exit 1
-fi
-
-# current branch name
-branch=`git rev-parse --abbrev-ref HEAD`
-base="master"
-
-# use last commit message if title is empty
-if [ -z "$title" ]; then
-    title=`git log -1 --pretty=%B`
+    exit_error "Repository not supported, must be GitHub."
 fi
 
 # grab github authentication credentials
@@ -33,9 +61,12 @@ username=`echo $credentials | sed -n "s/.*username=\([^ ]*\).*/\1/p"`
 password=`echo $credentials | sed -n "s/.*password=\([^ ]*\).*/\1/p"`
 
 if [ -z "$username" ] || [ -z "$password" ]; then
-    echo "Could not get GitHub credentials."
-    exit 1
+    exit_error "Could not get GitHub credentials."
 fi
+
+# current branch name
+branch=`git rev-parse --abbrev-ref HEAD`
+base="master"
 
 # push changes, and set up remote if not already tracking upstream branch.
 if git rev-parse @{u} > /dev/null 2>&1; then
@@ -52,8 +83,15 @@ fi
 # number of added commits
 commits=`git rev-list --count $base`
 
-# print pull request summary
 echo ""
+
+# use editor if title is not set
+if [ -z "$title" ]; then
+    set_with_editor
+    skip_confirm=1
+fi
+
+# print pull request summary
 echo "$commits commit(s) [$branch -> $base]"
 echo "Title: $title"
 
@@ -91,16 +129,12 @@ if [ $wget_status -eq 0 ]; then
 elif [ $wget_status -eq 8 ]; then
     github_error_msg=`echo $response | sed -n "s/.*\"errors\":.*\"message\": \"\([^\"]*\).*/\1/p"`
     if [ -z "$github_error_msg" ]; then
-        echo "Unknown API response:"
-        echo "$response"
+        exit_error "Unknown API response:\n$response"
     else
-        echo "$github_error_msg"
+        exit_error "$github_error_msg"
     fi
-    exit 1
 elif [ $wget_status -eq 6 ]; then
-	echo "Wrong username/password."
-    exit 1
+	exit_error "Wrong username or password/token."
 else
-    echo "Network error."
-    exit 1
+    exit_error "Network error."
 fi
