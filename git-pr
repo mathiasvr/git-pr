@@ -22,6 +22,9 @@ function set_with_editor {
     git_root=`git rev-parse --show-toplevel`
     pr_msg_file="$git_root/.git/PULLREQUEST_EDITMSG"
 
+    # list of commits between the base and head branches
+    commit_list=`git log --oneline $base..$branch | sed "s/^/# /"`
+
     # write pull request message file template
     cat > $pr_msg_file << EOF
 
@@ -30,6 +33,8 @@ function set_with_editor {
 # the pull request.
 #
 # $commits commit(s) [$branch -> $base]
+#
+$commit_list
 #
 EOF
 
@@ -81,7 +86,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # number of added commits
-commits=`git rev-list --count $base`
+commits=`git rev-list --count $base..$branch`
 
 echo ""
 
