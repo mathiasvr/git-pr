@@ -75,6 +75,13 @@ fi
 branch=`git rev-parse --abbrev-ref HEAD`
 base="master"
 
+# number of added commits
+commits=`git rev-list --count $base..$branch`
+
+if [ "$commits" = 0 ]; then
+    exit_error "No commits between $branch and $base"
+fi
+
 # push changes, and set up remote if not already tracking upstream branch.
 if git rev-parse @{u} > /dev/null 2>&1; then
     git push > /dev/null
@@ -86,9 +93,6 @@ fi
 if [ $? -ne 0 ]; then
     exit 1
 fi
-
-# number of added commits
-commits=`git rev-list --count $base..$branch`
 
 echo ""
 
