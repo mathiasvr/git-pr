@@ -49,7 +49,9 @@ EOF
     fi
 
     # subsequent lines are body, remove leading newlines, escape newlines for json
-    body=`grep -v ^# "$pr_msg_file" | tail +2 | sed '/./,$!d' | sed 's/$/\\\n/' | tr -d '\n'`
+    body=`grep -v ^# "$pr_msg_file" | tail +2 | \
+          sed '/./,$!d' | \
+          sed 's/$/\\\n/' | tr -d '\n'`
 }
 
 # extract github repository from remote origin
