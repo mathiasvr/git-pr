@@ -106,7 +106,7 @@ fi
 echo "$commits commit(s) [$branch -> $base]"
 echo "Title: $title"
 
-if [ -z $skip_confirm ]; then
+if [ -z "$skip_confirm" ]; then
     printf "\nOpen pull request [Y/n]? "
     read confirm
 
@@ -128,7 +128,7 @@ wget_status=$?
 
 # TODO: fix very crude json parsing
 if [ $wget_status -eq 0 ]; then
-    github_pr_url=`echo $response | sed -n "s/{[^{]*\"html_url\": \"\([^\"]*\).*/\1/p"`
+    github_pr_url=`echo $response | sed -n 's/{[^{]*"html_url": "\([^"]*\).*/\1/p'`
     echo "Pull request opened:"
     echo "$github_pr_url"
 
@@ -138,7 +138,7 @@ if [ $wget_status -eq 0 ]; then
         echo "$response"
     fi
 elif [ $wget_status -eq 8 ]; then
-    github_error_msg=`echo $response | sed -n "s/.*\"errors\":.*\"message\": \"\([^\"]*\).*/\1/p"`
+    github_error_msg=`echo $response | sed -n 's/.*"errors":.*"message": "\([^"]*\).*/\1/p'`
     if [ -z "$github_error_msg" ]; then
         exit_error "Unknown API response:\n$response"
     else
