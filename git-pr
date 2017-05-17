@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 
 # Git extension for making GitHub pull requests.
-# Usage: git pr [title] [description]
-
-title=$1
-body=$2
+# Usage: git pr [args] [title] [description]
 
 # print to stderr and exit
 function exit_error {
@@ -54,6 +51,24 @@ EOF
           sed 's/$/\\\n/' | tr -d '\n'`
 }
 
+# command line options
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -b|--base)  base="$2"; shift;;
+        -y|--yes)   skip_confirm=1;;
+        -*)         exit_error "Unknown argument: $1";;
+        *)          break;;
+    esac
+    shift
+done
+
+title=$1
+body=$2
+
+if [ -z "$base" ]; then
+    base="master"
+fi
+
 # extract github repository from remote origin
 repo=`git remote get-url origin | sed -n "s/.*\/\/github.com\/\(..*\).git/\1/p"`
 
@@ -73,7 +88,6 @@ fi
 
 # current branch name
 branch=`git rev-parse --abbrev-ref HEAD`
-base="master"
 
 # number of added commits
 commits=`git rev-list --count $base..$branch`
