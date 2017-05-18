@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 
 # Git extension for making GitHub pull requests.
-# Usage: git pr [args] [title] [description]
+# Usage: git pr [options] ["title"] ["description"]
+#
+# Options:
+#   -b, --base [base]   Base branch for the pull request
+#   -y, --yes           Don't show confirmation prompt
+#
+
 
 # print to stderr and exit
 function exit_error {
-    printf >&2 "$@\n" 
+    printf >&2 "$@\n"
     exit 1
 }
 
@@ -154,7 +160,7 @@ if [ $wget_status -eq 0 ]; then
     fi
 elif [ $wget_status -eq 8 ]; then
     error_code=`echo $response | jq -r '.errors[0].code'`
-    
+
     if [ "$error_code" = "invalid" ]; then
         field=`echo $response | jq -r '.errors[0].field'`
         exit_error "Invalid value provided for field '$field'."
