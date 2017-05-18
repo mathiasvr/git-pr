@@ -140,9 +140,8 @@ response=`wget --quiet --output-document=- --content-on-error \
                "https://api.github.com/repos/$repo/pulls"`
 wget_status=$?
 
-# TODO: fix very crude json parsing
 if [ $wget_status -eq 0 ]; then
-    github_pr_url=`echo $response | sed -n 's/{[^{]*"html_url": "\([^"]*\).*/\1/p'`
+    github_pr_url=`echo $response | jq -r '.html_url'`
     echo "Pull request opened:"
     echo "$github_pr_url"
 
@@ -152,11 +151,15 @@ if [ $wget_status -eq 0 ]; then
         echo "$response"
     fi
 elif [ $wget_status -eq 8 ]; then
-    github_error_msg=`echo $response | sed -n 's/.*"errors":.*"message": "\([^"]*\).*/\1/p'`
-    if [ -z "$github_error_msg" ]; then
-        exit_error "Unknown API response:\n$response"
+    error_code=`echo $response | jq -r '.errors[0].code'`
+    
+    if [ "$error_code" = "invalid" ]; then
+        field=`echo $response | jq -r '.errors[0].field'`
+        exit_error "Invalid value provided for field '$field'."
+    elif [ "$error_code" = "custom" ]; then
+        exit_error "`echo $response | jq -r '.errors[0].message'`"
     else
-        exit_error "$github_error_msg"
+        exit_error "Unknown API response:\n$response"
     fi
 elif [ $wget_status -eq 6 ]; then
 	exit_error "Wrong username or password/token."
