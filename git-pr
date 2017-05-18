@@ -90,9 +90,11 @@ fi
 branch=`git rev-parse --abbrev-ref HEAD`
 
 # number of added commits
-commits=`git rev-list --count $base..$branch`
+commits=`git rev-list --count $base..$branch 2>&1`
 
-if [ "$commits" = 0 ]; then
+if [ $? -ne 0 ]; then
+    exit_error "Unknown base '$base' not in working tree"
+elif [ "$commits" = 0 ]; then
     exit_error "No commits between $branch and $base"
 fi
 
