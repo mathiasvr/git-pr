@@ -63,7 +63,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         -b|--base)              base="$2"; shift;;
         -y|--yes)               skip_confirm=1;;
-        -c|--commit-message)    title=`git log -1 --pretty=%B`;;
+        -c|--commit-message)    title=`git log -1 --pretty=%B | head -1`;;
         -*)                     exit_error "Unknown argument: $1";;
         *)                      break;;
     esac
