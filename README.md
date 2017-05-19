@@ -6,8 +6,9 @@ Create GitHub pull requests from the command line!
     git pr [options] ["title"] ["description"]
 
 ### options
-    -b, --base [base]   Base branch for the pull request
-    -y, --yes           Don't show confirmation prompt
+    -b, --base [base]       Base branch for the pull request
+    -y, --yes               Don't show confirmation prompt
+    -c, --commit-message    Use the last commit message as title
 
 ## install
 

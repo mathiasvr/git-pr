@@ -4,8 +4,9 @@
 # Usage: git pr [options] ["title"] ["description"]
 #
 # Options:
-#   -b, --base [base]   Base branch for the pull request
-#   -y, --yes           Don't show confirmation prompt
+#   -b, --base [base]       Base branch for the pull request
+#   -y, --yes               Don't show confirmation prompt
+#   -c, --commit-message    Use the last commit message as title
 #
 
 
@@ -60,16 +61,21 @@ EOF
 # command line options
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -b|--base)  base="$2"; shift;;
-        -y|--yes)   skip_confirm=1;;
-        -*)         exit_error "Unknown argument: $1";;
-        *)          break;;
+        -b|--base)              base="$2"; shift;;
+        -y|--yes)               skip_confirm=1;;
+        -c|--commit-message)    title=`git log -1 --pretty=%B`;;
+        -*)                     exit_error "Unknown argument: $1";;
+        *)                      break;;
     esac
     shift
 done
 
-title=$1
-body=$2
+if [ -z "$title" ]; then
+    title=$1
+    body=$2
+else
+    body=$1
+fi
 
 if [ -z "$base" ]; then
     base="master"
@@ -127,6 +133,9 @@ fi
 # print pull request summary
 echo "$commits commit(s) [$branch -> $base]"
 echo "Title: $title"
+if [ -n "$body" ]; then
+    echo "Body: $body"
+fi
 
 if [ -z "$skip_confirm" ]; then
     printf "\nOpen pull request [Y/n]? "
