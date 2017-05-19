@@ -7,6 +7,7 @@
 #   -b, --base [base]       Base branch for the pull request
 #   -y, --yes               Don't show confirmation prompt
 #   -c, --commit-message    Use the last commit message as title
+#   -o, --browse            Open created pull request url in browser.
 #
 
 
@@ -64,6 +65,7 @@ while [[ $# -gt 0 ]]; do
         -b|--base)              base="$2"; shift;;
         -y|--yes)               skip_confirm=1;;
         -c|--commit-message)    title=`git log -1 --pretty=%B | head -1`;;
+        -o|--browse)            open_browser=1;;
         -*)                     exit_error "Unknown argument: $1";;
         *)                      break;;
     esac
@@ -161,6 +163,10 @@ if [ $wget_status -eq 0 ]; then
     github_pr_url=`echo $response | jq -r '.html_url'`
     echo "Pull request opened:"
     echo "$github_pr_url"
+
+    if [ -n "$open_browser" ] && [ -n "$github_pr_url" ]; then
+        git web--browse "$github_pr_url" > /dev/null 2>&1;
+    fi
 
     # TODO: remove this
     if [ -z "$github_pr_url" ]; then

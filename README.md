@@ -9,6 +9,7 @@ Create GitHub pull requests from the command line!
     -b, --base [base]       Base branch for the pull request
     -y, --yes               Don't show confirmation prompt
     -c, --commit-message    Use the last commit message as title
+    -o, --browse            Open created pull request url in browser.
 
 ## install
 
