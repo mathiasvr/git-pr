@@ -5,6 +5,8 @@ Create GitHub pull requests from the command line!
 ## usage
     git pr [options] ["title"] ["description"]
 
+Omitting title and description will open the default editor, similar to `git commit`.
+
 ### options
     -b, --base [base]       Base branch for the pull request
     -y, --yes               Don't show confirmation prompt
