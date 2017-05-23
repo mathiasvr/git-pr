@@ -62,7 +62,7 @@ EOF
 # command line options
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -b|--base)              base="$2"; shift;;
+        -b|--base)              base_name="$2"; shift;;
         -y|--yes)               skip_confirm=1;;
         -c|--commit-message)    title=`git log -1 --pretty=%B | head -1`;;
         -o|--browse)            open_browser=1;;
@@ -79,9 +79,11 @@ else
     body=$1
 fi
 
-if [ -z "$base" ]; then
-    base="master"
+if [ -z "$base_name" ]; then
+    base_name="master"
 fi
+
+base="origin/$base_name"
 
 # extract github repository from remote origin
 repo=`git remote get-url origin | sed -n "s/.*\/\/github.com\/\(..*\).git/\1/p"`
@@ -102,6 +104,9 @@ fi
 
 # current branch name
 branch=`git rev-parse --abbrev-ref HEAD`
+
+# update remote base branch
+git fetch origin $base_name > /dev/null 2>&1
 
 # number of added commits
 commits=`git rev-list --count $base..$branch 2>&1`
@@ -155,7 +160,7 @@ response=`wget --quiet --output-document=- --content-on-error \
                --user="$username" --password="$password" --auth-no-challenge \
                --header="Content-Type: application/json" \
                --header="Accept: application/vnd.github.v3+json" \
-               --post-data="{\"title\":\"$title\",\"body\":\"$body\",\"head\":\"$branch\",\"base\":\"$base\"}" \
+               --post-data="{\"title\":\"$title\",\"body\":\"$body\",\"head\":\"$branch\",\"base\":\"$base_name\"}" \
                "https://api.github.com/repos/$repo/pulls"`
 wget_status=$?
 
