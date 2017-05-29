@@ -4,7 +4,7 @@
 # Usage: git pr [options] ["title"] ["description"]
 #
 # Options:
-#   -b, --base [base]       Base branch for the pull request
+#   -b, --base "master"     Base branch for the pull request
 #   -y, --yes               Don't show confirmation prompt
 #   -c, --commit-message    Use the last commit message as title
 #   -o, --browse            Open created pull request url in browser.
@@ -53,10 +53,8 @@ EOF
         exit_error "Aborting pull request due to empty title."
     fi
 
-    # subsequent lines are body, remove leading newlines, escape newlines for json
-    body=`grep -v ^# "$pr_msg_file" | tail +2 | \
-          sed '/./,$!d' | \
-          sed 's/$/\\\n/' | tr -d '\n'`
+    # subsequent lines are body (remove leading newlines)
+    body=`grep -v ^# "$pr_msg_file" | tail +2 | sed '/./,$!d'`
 }
 
 # command line options
@@ -155,13 +153,15 @@ fi
 
 echo ""
 
+# properly escape json
+json=`jq -nc "{title:\"$title\",body:\"$body\",head:\"$branch\",base:\"$base_name\"}"`
+
 # create a pull request through the github api
 response=`wget --quiet --output-document=- --content-on-error \
                --user="$username" --password="$password" --auth-no-challenge \
                --header="Content-Type: application/json" \
                --header="Accept: application/vnd.github.v3+json" \
-               --post-data="{\"title\":\"$title\",\"body\":\"$body\",\"head\":\"$branch\",\"base\":\"$base_name\"}" \
-               "https://api.github.com/repos/$repo/pulls"`
+               --post-data="$json" "https://api.github.com/repos/$repo/pulls"`
 wget_status=$?
 
 if [ $wget_status -eq 0 ]; then
