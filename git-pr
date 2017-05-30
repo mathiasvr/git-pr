@@ -13,7 +13,7 @@
 
 # print to stderr and exit
 function exit_error {
-    printf >&2 "$@\n"
+    echo "$@" >&2
     exit 1
 }
 
@@ -28,10 +28,10 @@ function set_with_editor {
     pr_msg_file="$git_root/.git/PULLREQUEST_EDITMSG"
 
     # list of commits between the base and head branches
-    commit_list=`git log --oneline $base..$branch | sed "s/^/# /"`
+    commit_list=`git log --oneline "$base..$branch" | sed "s/^/# /"`
 
     # write pull request message file template
-    cat > $pr_msg_file << EOF
+    cat > "$pr_msg_file" << EOF
 
 # Please enter a pull request title and description, on separate lines.
 # Lines starting with '#' will be ignored, and an empty title aborts
@@ -107,7 +107,7 @@ branch=`git rev-parse --abbrev-ref HEAD`
 git fetch origin $base_name > /dev/null 2>&1
 
 # number of added commits
-commits=`git rev-list --count $base..$branch 2>&1`
+commits=`git rev-list --count "$base..$branch" 2>&1`
 
 if [ $? -ne 0 ]; then
     exit_error "Unknown base '$base' not in working tree"
@@ -116,7 +116,7 @@ elif [ "$commits" = 0 ]; then
 fi
 
 # push changes, and set up remote if not already tracking upstream branch.
-if git rev-parse @{u} > /dev/null 2>&1; then
+if git rev-parse "@{u}" > /dev/null 2>&1; then
     git push > /dev/null
 else
     git push -u origin "$branch"
@@ -144,7 +144,7 @@ fi
 
 if [ -z "$skip_confirm" ]; then
     printf "\nOpen pull request [Y/n]? "
-    read confirm
+    read -r confirm
 
     if [ -n "$confirm" ] && [ "$confirm" != "Y" ] && [ "$confirm" != "y" ]; then
         exit 1
@@ -165,7 +165,7 @@ response=`wget --quiet --output-document=- --content-on-error \
 wget_status=$?
 
 if [ $wget_status -eq 0 ]; then
-    github_pr_url=`echo $response | jq -r '.html_url'`
+    github_pr_url=`echo "$response" | jq -r '.html_url'`
     echo "Pull request opened:"
     echo "$github_pr_url"
 
@@ -179,13 +179,13 @@ if [ $wget_status -eq 0 ]; then
         echo "$response"
     fi
 elif [ $wget_status -eq 8 ]; then
-    error_code=`echo $response | jq -r '.errors[0].code'`
+    error_code=`echo "$response" | jq -r '.errors[0].code'`
 
     if [ "$error_code" = "invalid" ]; then
-        field=`echo $response | jq -r '.errors[0].field'`
+        field=`echo "$response" | jq -r '.errors[0].field'`
         exit_error "Invalid value provided for field '$field'."
     elif [ "$error_code" = "custom" ]; then
-        exit_error "`echo $response | jq -r '.errors[0].message'`"
+        exit_error "`echo "$response" | jq -r '.errors[0].message'`"
     else
         exit_error "Unknown API response:\n$response"
     fi
